@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI((process.env.GEMINI_API_KEY || "").trim());
 
-app.use(express.static('public'));
+app.use (express.static('public'));
 app.use(express.json());
 
 app.post('/analyze', upload.single('report'), async (req, res) => {

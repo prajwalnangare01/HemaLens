@@ -24,15 +24,39 @@
                     <span class="logo-text">HemaLens</span>
                 </div>
                 <div class="nav-links">
-                    <a href="index.html" class="active">Home</a>
-                    <a href="guide.html">Biomarker Guide</a>
+                    <a href="#" id="homeLink" class="active">Home</a>
+                    <a href="#" id="historyLink">History</a>
+                    <a href="guide.html">Guide</a>
                     <a href="privacy.html">Privacy</a>
+                    <button id="logoutBtn" class="btn-text hidden">Logout</button>
                 </div>
             </nav>
         </header>
 
-        <main id="home">
-            <section class="hero">
+        <main id="mainContent">
+            <!-- Login Section -->
+            <section id="loginSection" class="login-section">
+                <div class="login-card">
+                    <h2>Welcome Back</h2>
+                    <p>Login to analyze and track your health reports</p>
+                    <form id="loginForm">
+                        <div class="input-group">
+                            <label>Email Address</label>
+                            <input type="email" id="loginEmail" placeholder="prajwal@gmail.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPass" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full">Sign In</button>
+                        <p id="loginError" class="error-text hidden">Invalid email or password</p>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Home Section (Analyzer) -->
+            <div id="home" class="hidden">
+                <section class="hero">
                 <div class="hero-content">
                     <h1>Understand Your Health <br><span class="highlight">Beyond the Numbers</span></h1>
                     <p>HemaLens uses advanced AI to bridge the gap between complex laboratory data and your well-being.
@@ -44,7 +68,10 @@
                             <h3>Upload Blood Report</h3>
                             <p>Drag and drop your report image (JPG, PNG) or click to browse</p>
                             <input type="file" id="fileInput" accept="image/*" hidden>
-                            <button class="btn btn-primary" id="uploadBtn">Choose File</button>
+                            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                                <button class="btn btn-primary" id="uploadBtn">Choose File</button>
+                                <button class="btn btn-outline" id="sampleBtn" style="padding: 0.8rem 2rem;">Try Sample</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -151,6 +178,19 @@
                 </div>
             </section>
 
+            <!-- History Section -->
+            <section id="historySection" class="history-section hidden">
+                <div class="section-header">
+                    <h2>Report History</h2>
+                    <p>Access your previously analyzed blood reports</p>
+                </div>
+                <div id="historyList" class="history-grid">
+                    <!-- History items will be injected here -->
+                </div>
+                <div id="emptyHistory" class="empty-state hidden">
+                    <p>No reports found. Start by analyzing a new report!</p>
+                </div>
+            </section>
         </main>
 
         <footer>

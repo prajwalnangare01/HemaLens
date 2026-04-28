@@ -1,20 +1,104 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Auth State
+    const AUTH_USER = 'prajwal@gmail.com';
+    const AUTH_PASS = 'password';
+    
+    const loginSection = document.getElementById('loginSection');
+    const homeSection = document.getElementById('home');
+    const historySection = document.getElementById('historySection');
+    const loginForm = document.getElementById('loginForm');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const homeLink = document.getElementById('homeLink');
+    const historyLink = document.getElementById('historyLink');
+    const resultsSection = document.getElementById('resultsSection');
+
+    // Check Login
+    function checkAuth() {
+        if (!loginSection || !homeSection) return;
+        
+        const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+        if (isLoggedIn) {
+            loginSection.classList.add('hidden');
+            homeSection.classList.remove('hidden');
+            if (logoutBtn) logoutBtn.classList.remove('hidden');
+            if (homeLink) {
+                homeLink.classList.remove('hidden');
+                homeLink.classList.add('active');
+            }
+            if (historyLink) historyLink.classList.remove('hidden');
+        } else {
+            loginSection.classList.remove('hidden');
+            homeSection.classList.add('hidden');
+            if (historySection) historySection.classList.add('hidden');
+            if (logoutBtn) logoutBtn.classList.add('hidden');
+            if (homeLink) homeLink.classList.add('hidden');
+            if (historyLink) historyLink.classList.add('hidden');
+        }
+    }
+
+    checkAuth();
+
+    // Login Handler
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
+            const errorText = document.getElementById('loginError');
+
+            if (email === AUTH_USER && pass === AUTH_PASS) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                checkAuth();
+                errorText.classList.add('hidden');
+            } else {
+                errorText.classList.remove('hidden');
+                alert('Invalid email or password. Please try again.');
+            }
+        });
+    }
+
+    // Logout Handler
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('isLoggedIn');
+                location.reload();
+            }
+        });
+    }
+
+    // Nav Navigation
+    if (homeLink) {
+        homeLink.onclick = (e) => {
+            e.preventDefault();
+            homeSection.classList.remove('hidden');
+            if (historySection) historySection.classList.add('hidden');
+            homeLink.classList.add('active');
+            if (historyLink) historyLink.classList.remove('active');
+        };
+    }
+
+    if (historyLink) {
+        historyLink.onclick = (e) => {
+            e.preventDefault();
+            homeSection.classList.add('hidden');
+            if (historySection) historySection.classList.remove('hidden');
+            resultsSection.classList.add('hidden'); 
+            historyLink.classList.add('active');
+            if (homeLink) homeLink.classList.remove('active');
+            renderHistory();
+        };
+    }
+
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
-    const resultsSection = document.getElementById('resultsSection');
-    const homeSection = document.getElementById('home');
 
     const navLinks = document.querySelectorAll('.nav-links a');
 
     // Handle Nav Active State
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-        });
-    });
+    // (Removed static navLinks listener as we handle navigation manually for History/Home)
 
     // Drag and Drop (Only on Index Page)
     if (uploadZone) {
@@ -39,6 +123,35 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+    }
+
+    const sampleBtn = document.getElementById('sampleBtn');
+    if (sampleBtn) {
+        sampleBtn.addEventListener('click', () => {
+            const sampleData = {
+                biomarkers: [
+                    { parameter: "Hemoglobin", result: "14.2", range: "13.5 - 17.5", status: "Normal" },
+                    { parameter: "WBC Count", result: "7500", range: "4000 - 11000", status: "Normal" },
+                    { parameter: "Glucose", result: "105", range: "70 - 100", status: "High" }
+                ],
+                docsNote: "The hemoglobin and WBC count are within normal ranges. Fasting glucose is slightly elevated.",
+                hindiSummary: "रिपोर्ट सामान्य है, लेकिन शुगर का स्तर थोड़ा बढ़ा हुआ है।",
+                actionableSteps: ["Monitor sugar intake", "Increase fiber", "Morning walks"],
+                nutritionPlan: ["Leafy greens", "Whole grains", "Low-GI fruits"],
+                risk: null
+            };
+
+            loadingOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                saveToHistory(sampleData);
+                showResults(sampleData);
+                resultsSection.classList.remove('hidden');
+                void resultsSection.offsetWidth;
+                resultsSection.classList.add('visible');
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }, 1000);
         });
     }
 
@@ -73,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             loadingOverlay.classList.add('hidden');
+            saveToHistory(data);
             showResults(data);
             resultsSection.classList.remove('hidden');
             // Force a reflow to trigger animations
@@ -110,6 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function showResults(data) {
+        if (!data || !data.biomarkers) {
+            console.error('Invalid report data:', data);
+            return;
+        }
+
         // Populate Table
         const tbody = document.querySelector('#biomarkerTable tbody');
         tbody.innerHTML = '';
@@ -194,6 +313,71 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="scale-bar ${colorClass}" style="width: ${percent}%"></div>
             </div>
         `;
+    }
+
+    // History Functions
+    function saveToHistory(data) {
+        const history = JSON.parse(localStorage.getItem('reportHistory') || '[]');
+        const report = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            data: data
+        };
+        history.unshift(report); // Add to beginning
+        localStorage.setItem('reportHistory', JSON.stringify(history));
+    }
+
+    function renderHistory() {
+        const historyList = document.getElementById('historyList');
+        const emptyHistory = document.getElementById('emptyHistory');
+        const history = JSON.parse(localStorage.getItem('reportHistory') || '[]');
+
+        if (history.length === 0) {
+            emptyHistory.classList.remove('hidden');
+            historyList.innerHTML = '';
+            return;
+        }
+
+        emptyHistory.classList.add('hidden');
+        historyList.innerHTML = '';
+
+        history.forEach(item => {
+            const dateStr = new Date(item.date).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            const markerCount = item.data.biomarkers.length;
+            
+            const card = document.createElement('div');
+            card.className = 'history-card';
+            card.innerHTML = `
+                <div class="history-info">
+                    <h4>Blood Report Analysis</h4>
+                    <p>${dateStr} • ${markerCount} Parameters</p>
+                </div>
+                <div class="history-badge" style="background: ${item.data.risk ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; color: ${item.data.risk ? 'var(--danger)' : 'var(--secondary)'}">
+                    ${item.data.risk ? 'Critical' : 'Normal'}
+                </div>
+            `;
+            card.onclick = () => {
+                console.log('Loading result from history:', item.data);
+                showResults(item.data);
+                
+                // Ensure sections are toggled correctly
+                homeSection.classList.remove('hidden');
+                historySection.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+                
+                // Reset scroll and trigger visibility
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                void resultsSection.offsetWidth;
+                resultsSection.classList.add('visible');
+                
+                // Update nav state
+                homeLink.classList.add('active');
+                historyLink.classList.remove('active');
+            };
+            historyList.appendChild(card);
+        });
     }
 
     function setupExtraFeatures(data) {
