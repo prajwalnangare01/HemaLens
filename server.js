@@ -19,13 +19,13 @@ app.post('/analyze', upload.single('report'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         // Get image data from memory buffer
         const imageData = req.file.buffer;
         const prompt = "ROLE: Clinical Data Scientist. TASK: Identify biomarkers from this blood report image. OUTPUT: Return ONLY a JSON object with keys: biomarkers (array of {parameter, result, range, status}), docsNote (English simple explanation), hindiSummary (3 sentences Hindi), actionableSteps (3 lifestyle tips), nutritionPlan (3 specific food recommendations based on analysis), risk (red alert message if life-threatening, else null).";
 
-        console.log("--- Starting Analysis with Gemini 2.5 Flash ---");
+        console.log("--- Starting Analysis with Gemini Flash Latest ---");
         const result = await model.generateContent([{
             inlineData: { data: imageData.toString('base64'), mimeType: req.file.mimetype }
         }, prompt]);
@@ -42,6 +42,8 @@ app.post('/analyze', upload.single('report'), async (req, res) => {
         let msg = "Analysis failed. Please try again.";
         if (error.message.includes('429')) {
             msg = "Google Quota limit reached. Please wait a bit and try again.";
+        } else if (error.message.includes('503')) {
+            msg = "The AI model is currently experiencing high demand. Please try again later.";
         }
         res.status(500).json({ error: msg });
     }
