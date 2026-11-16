@@ -15,13 +15,33 @@ const genAI = new GoogleGenerativeAI((process.env.GEMINI_API_KEY || "").trim());
 app.use(express.static('public'));
 app.use(express.json());
 
-// List of candidate models for automatic fallback during high demand / spikes
+// List of candidate models optimized for speed (zero thinking latency) and high reliability
 const CANDIDATE_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest"
+    {
+        name: "gemini-2.5-flash",
+        config: {
+            responseMimeType: "application/json",
+            thinkingConfig: { thinkingBudget: 0 } // Eliminates 10-15s thinking latency
+        }
+    },
+    {
+        name: "gemini-3.5-flash",
+        config: {
+            responseMimeType: "application/json"
+        }
+    },
+    {
+        name: "gemini-3.1-flash-lite",
+        config: {
+            responseMimeType: "application/json"
+        }
+    },
+    {
+        name: "gemini-flash-latest",
+        config: {
+            responseMimeType: "application/json"
+        }
+    }
 ];
 
 app.post('/analyze', upload.single('report'), async (req, res) => {
@@ -34,12 +54,12 @@ app.post('/analyze', upload.single('report'), async (req, res) => {
         let parsedData = null;
         let lastError = null;
 
-        for (const modelName of CANDIDATE_MODELS) {
+        for (const candidate of CANDIDATE_MODELS) {
             try {
-                console.log(`--- Starting Analysis with ${modelName} ---`);
+                console.log(`--- Starting Fast Analysis with ${candidate.name} ---`);
                 const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    generationConfig: { responseMimeType: "application/json" }
+                    model: candidate.name,
+                    generationConfig: candidate.config
                 });
 
                 const result = await model.generateContent([{
@@ -49,13 +69,13 @@ app.post('/analyze', upload.single('report'), async (req, res) => {
                 const text = result.response.text();
                 const cleanedJson = text.replace(/```json|```/g, '').trim();
                 parsedData = JSON.parse(cleanedJson);
-                console.log(`✅ Analysis Successful with ${modelName}`);
+                console.log(`✅ Analysis Successful with ${candidate.name}`);
                 break;
             } catch (err) {
-                console.warn(`⚠️ Model ${modelName} failed: ${err.message}`);
+                console.warn(`⚠️ Model ${candidate.name} failed: ${err.message}`);
                 lastError = err;
                 // Brief pause before trying fallback model
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 400));
             }
         }
 

@@ -65,6 +65,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let isProcessing = false;
+    const loadingStatusText = document.getElementById('loadingStatusText');
+    const loadingMessages = [
+        'Scanning report & extracting biomarkers...',
+        'Evaluating reference ranges & clinical values...',
+        'Formulating AI doctor\'s note & nutrition plan...',
+        'Finalizing comprehensive clinical report...'
+    ];
+    let statusInterval = null;
+
+    function startLoadingAnimation() {
+        if (!loadingStatusText) return;
+        let index = 0;
+        loadingStatusText.textContent = loadingMessages[0];
+        if (statusInterval) clearInterval(statusInterval);
+        statusInterval = setInterval(() => {
+            index = (index + 1) % loadingMessages.length;
+            loadingStatusText.textContent = loadingMessages[index];
+        }, 1400);
+    }
+
+    function stopLoadingAnimation() {
+        if (statusInterval) {
+            clearInterval(statusInterval);
+            statusInterval = null;
+        }
+        if (loadingStatusText) {
+            loadingStatusText.textContent = loadingMessages[0];
+        }
+    }
+
+    // Client-side image optimization: compresses high-res phone photos to speed up network upload & processing
+    async function compressImageIfNeeded(file, maxDimension = 1600, quality = 0.85) {
+        if (!file.type.startsWith('image/')) return file;
+        if (file.size <= 500 * 1024) return file; // Skip compression if already under 500KB
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                img.onload = () => {
+                    let { width, height } = img;
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.round((height * maxDimension) / width);
+                            width = maxDimension;
+                        } else {
+                            width = Math.round((width * maxDimension) / height);
+                            height = maxDimension;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob && blob.size < file.size) {
+                            const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressed);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => resolve(file);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(file);
+            reader.readAsDataURL(file);
+        });
+    }
 
     async function handleFile(file) {
         if (isProcessing) return;
@@ -74,15 +151,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         isProcessing = true;
-        // Show loading
+        startLoadingAnimation();
         loadingOverlay.classList.remove('hidden');
         uploadBtn.disabled = true;
         uploadBtn.textContent = 'Processing...';
 
-        const formData = new FormData();
-        formData.append('report', file);
-
         try {
+            const optimizedFile = await compressImageIfNeeded(file);
+            const formData = new FormData();
+            formData.append('report', optimizedFile);
+
             const response = await fetch('/analyze', {
                 method: 'POST',
                 body: formData
@@ -94,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Failed to analyze report');
             }
 
+            stopLoadingAnimation();
             loadingOverlay.classList.add('hidden');
             showResults(data);
             resultsSection.classList.remove('hidden');
@@ -104,9 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(error);
             alert(`Error: ${error.message}`);
+            stopLoadingAnimation();
             loadingOverlay.classList.add('hidden');
         } finally {
             isProcessing = false;
+            stopLoadingAnimation();
             uploadBtn.disabled = false;
             uploadBtn.textContent = 'Choose File';
         }
