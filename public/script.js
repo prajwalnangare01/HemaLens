@@ -1,77 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Auth State
-    const AUTH_USER = 'prajwal@gmail.com';
-    const AUTH_PASS = 'password';
-    
-    const loginSection = document.getElementById('loginSection');
     const homeSection = document.getElementById('home');
     const historySection = document.getElementById('historySection');
-    const loginForm = document.getElementById('loginForm');
-    const logoutBtn = document.getElementById('logoutBtn');
     const homeLink = document.getElementById('homeLink');
     const historyLink = document.getElementById('historyLink');
     const resultsSection = document.getElementById('resultsSection');
-
-    // Check Login
-    function checkAuth() {
-        if (!loginSection || !homeSection) return;
-        
-        const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
-        if (isLoggedIn) {
-            loginSection.classList.add('hidden');
-            homeSection.classList.remove('hidden');
-            if (logoutBtn) logoutBtn.classList.remove('hidden');
-            if (homeLink) {
-                homeLink.classList.remove('hidden');
-                homeLink.classList.add('active');
-            }
-            if (historyLink) historyLink.classList.remove('hidden');
-        } else {
-            loginSection.classList.remove('hidden');
-            homeSection.classList.add('hidden');
-            if (historySection) historySection.classList.add('hidden');
-            if (logoutBtn) logoutBtn.classList.add('hidden');
-            if (homeLink) homeLink.classList.add('hidden');
-            if (historyLink) historyLink.classList.add('hidden');
-        }
-    }
-
-    checkAuth();
-
-    // Login Handler
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPass').value;
-            const errorText = document.getElementById('loginError');
-
-            if (email === AUTH_USER && pass === AUTH_PASS) {
-                sessionStorage.setItem('isLoggedIn', 'true');
-                checkAuth();
-                errorText.classList.add('hidden');
-            } else {
-                errorText.classList.remove('hidden');
-                alert('Invalid email or password. Please try again.');
-            }
-        });
-    }
-
-    // Logout Handler
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to logout?')) {
-                sessionStorage.removeItem('isLoggedIn');
-                location.reload();
-            }
-        });
-    }
 
     // Nav Navigation
     if (homeLink) {
         homeLink.onclick = (e) => {
             e.preventDefault();
-            homeSection.classList.remove('hidden');
+            if (homeSection) homeSection.classList.remove('hidden');
             if (historySection) historySection.classList.add('hidden');
             homeLink.classList.add('active');
             if (historyLink) historyLink.classList.remove('active');
@@ -81,9 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (historyLink) {
         historyLink.onclick = (e) => {
             e.preventDefault();
-            homeSection.classList.add('hidden');
+            if (homeSection) homeSection.classList.add('hidden');
             if (historySection) historySection.classList.remove('hidden');
-            resultsSection.classList.add('hidden'); 
+            if (resultsSection) resultsSection.classList.add('hidden'); 
             historyLink.classList.add('active');
             if (homeLink) homeLink.classList.remove('active');
             renderHistory();
