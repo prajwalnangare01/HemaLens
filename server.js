@@ -12,30 +12,58 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI((process.env.GEMINI_API_KEY || "").trim());
 
-app.use (express.static('public'));
+app.use(express.static('public'));
 app.use(express.json());
+
+// List of candidate models for automatic fallback during high demand / spikes
+const CANDIDATE_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest"
+];
 
 app.post('/analyze', upload.single('report'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-        // Get image data from memory buffer
         const imageData = req.file.buffer;
         const prompt = "ROLE: Clinical Data Scientist. TASK: Identify biomarkers from this blood report image. OUTPUT: Return ONLY a JSON object with keys: biomarkers (array of {parameter, result, range, status}), docsNote (English simple explanation), hindiSummary (3 sentences Hindi), actionableSteps (3 lifestyle tips), nutritionPlan (3 specific food recommendations based on analysis), risk (red alert message if life-threatening, else null).";
 
-        console.log("--- Starting Analysis with Gemini Flash Latest ---");
-        const result = await model.generateContent([{
-            inlineData: { data: imageData.toString('base64'), mimeType: req.file.mimetype }
-        }, prompt]);
+        let parsedData = null;
+        let lastError = null;
 
-        const text = result.response.text();
-        const cleanedJson = text.replace(/```json|```/g, '').trim();
-        const data = JSON.parse(cleanedJson);
+        for (const modelName of CANDIDATE_MODELS) {
+            try {
+                console.log(`--- Starting Analysis with ${modelName} ---`);
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: { responseMimeType: "application/json" }
+                });
 
-        console.log(`✅ Analysis Successful`);
-        res.json(data);
+                const result = await model.generateContent([{
+                    inlineData: { data: imageData.toString('base64'), mimeType: req.file.mimetype }
+                }, prompt]);
+
+                const text = result.response.text();
+                const cleanedJson = text.replace(/```json|```/g, '').trim();
+                parsedData = JSON.parse(cleanedJson);
+                console.log(`✅ Analysis Successful with ${modelName}`);
+                break;
+            } catch (err) {
+                console.warn(`⚠️ Model ${modelName} failed: ${err.message}`);
+                lastError = err;
+                // Brief pause before trying fallback model
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+
+        if (!parsedData) {
+            throw lastError || new Error("All AI models failed to respond.");
+        }
+
+        res.json(parsedData);
 
     } catch (error) {
         console.error('Server Error:', error.message);
@@ -43,7 +71,7 @@ app.post('/analyze', upload.single('report'), async (req, res) => {
         if (error.message.includes('429')) {
             msg = "Google Quota limit reached. Please wait a bit and try again.";
         } else if (error.message.includes('503')) {
-            msg = "The AI model is currently experiencing high demand. Please try again later.";
+            msg = "The AI model is currently experiencing high demand. Please try again in a moment.";
         }
         res.status(500).json({ error: msg });
     }
