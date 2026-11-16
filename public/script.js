@@ -1,33 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const homeSection = document.getElementById('home');
-    const historySection = document.getElementById('historySection');
-    const homeLink = document.getElementById('homeLink');
-    const historyLink = document.getElementById('historyLink');
     const resultsSection = document.getElementById('resultsSection');
-
-    // Nav Navigation
-    if (homeLink) {
-        homeLink.onclick = (e) => {
-            e.preventDefault();
-            if (homeSection) homeSection.classList.remove('hidden');
-            if (historySection) historySection.classList.add('hidden');
-            homeLink.classList.add('active');
-            if (historyLink) historyLink.classList.remove('active');
-        };
-    }
-
-    if (historyLink) {
-        historyLink.onclick = (e) => {
-            e.preventDefault();
-            if (homeSection) homeSection.classList.add('hidden');
-            if (historySection) historySection.classList.remove('hidden');
-            if (resultsSection) resultsSection.classList.add('hidden'); 
-            historyLink.classList.add('active');
-            if (homeLink) homeLink.classList.remove('active');
-            renderHistory();
-        };
-    }
-
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
@@ -83,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingOverlay.classList.remove('hidden');
             setTimeout(() => {
                 loadingOverlay.classList.add('hidden');
-                saveToHistory(sampleData);
                 showResults(sampleData);
                 resultsSection.classList.remove('hidden');
                 void resultsSection.offsetWidth;
@@ -124,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             loadingOverlay.classList.add('hidden');
-            saveToHistory(data);
             showResults(data);
             resultsSection.classList.remove('hidden');
             // Force a reflow to trigger animations
@@ -253,70 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // History Functions
-    function saveToHistory(data) {
-        const history = JSON.parse(localStorage.getItem('reportHistory') || '[]');
-        const report = {
-            id: Date.now(),
-            date: new Date().toISOString(),
-            data: data
-        };
-        history.unshift(report); // Add to beginning
-        localStorage.setItem('reportHistory', JSON.stringify(history));
-    }
 
-    function renderHistory() {
-        const historyList = document.getElementById('historyList');
-        const emptyHistory = document.getElementById('emptyHistory');
-        const history = JSON.parse(localStorage.getItem('reportHistory') || '[]');
-
-        if (history.length === 0) {
-            emptyHistory.classList.remove('hidden');
-            historyList.innerHTML = '';
-            return;
-        }
-
-        emptyHistory.classList.add('hidden');
-        historyList.innerHTML = '';
-
-        history.forEach(item => {
-            const dateStr = new Date(item.date).toLocaleDateString('en-US', {
-                month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-            const markerCount = item.data.biomarkers.length;
-            
-            const card = document.createElement('div');
-            card.className = 'history-card';
-            card.innerHTML = `
-                <div class="history-info">
-                    <h4>Blood Report Analysis</h4>
-                    <p>${dateStr} • ${markerCount} Parameters</p>
-                </div>
-                <div class="history-badge" style="background: ${item.data.risk ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; color: ${item.data.risk ? 'var(--danger)' : 'var(--secondary)'}">
-                    ${item.data.risk ? 'Critical' : 'Normal'}
-                </div>
-            `;
-            card.onclick = () => {
-                console.log('Loading result from history:', item.data);
-                showResults(item.data);
-                
-                // Ensure sections are toggled correctly
-                homeSection.classList.remove('hidden');
-                historySection.classList.add('hidden');
-                resultsSection.classList.remove('hidden');
-                
-                // Reset scroll and trigger visibility
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                void resultsSection.offsetWidth;
-                resultsSection.classList.add('visible');
-                
-                // Update nav state
-                homeLink.classList.add('active');
-                historyLink.classList.remove('active');
-            };
-            historyList.appendChild(card);
-        });
-    }
 
     function setupExtraFeatures(data) {
         const speakEnglishBtn = document.getElementById('speakEnglish');

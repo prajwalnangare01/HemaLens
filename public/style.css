@@ -115,58 +115,7 @@ nav {
 
 
 
-/* History Section */
-.history-section {
-    padding: 2rem 0 6rem 0;
-}
 
-.history-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
-
-.history-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.history-card:hover {
-    transform: translateY(-5px);
-    border-color: var(--primary);
-}
-
-.history-info h4 {
-    margin-bottom: 0.2rem;
-}
-
-.history-info p {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.history-badge {
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 4rem 0;
-    color: var(--text-muted);
-}
 
 /* Hero Section */
 .hero {
